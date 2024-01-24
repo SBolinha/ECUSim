@@ -1,14 +1,9 @@
-#ifndef PIDMAP_DEFINITION_H
-#define PIDMAP_DEFINITION_H
-
-#include <avr/pgmspace.h>
-
-// Define byte length of each PIDS
-// Set 0 to disable PID
-// (Currently, PID with max 4 bytes are supported.)
-constexpr unsigned char _PID_BYTE_LENGTH[256] =
+# Define byte length of each PIDS
+# Set 0 to disable PID
+# (Currently, PID with max 4 bytes are supported.)
+_PID_BYTE_LENGTH[256] =
     {
-        0, // PID:0x00 (refer PIDAvailableFlagMap in PROGMEM)
+        0, # PID:0x00 (refer PIDAvailableFlagMap in PROGMEM)
         4, // PID:0x01
         2, // PID:0x02
         2, // PID:0x03
@@ -264,25 +259,18 @@ constexpr unsigned char _PID_BYTE_LENGTH[256] =
         0, // PID:0xFD
         0, // PID:0xFE
         0  // PID:0xFF
-};
-
-/* --- Create available PID flag map --- */
-/* --- Do not edit --- */
-constexpr unsigned char calcAvailablePIDFlag(int pidOffset);
-constexpr unsigned char calcAvailablePIDFlag_internal(int pidOffset, int bitIndex, int lastBitIndex);
-
-constexpr unsigned char calcAvailablePIDFlag(int pidOffset)
-{
-    return (pidOffset == 0xF9)?calcAvailablePIDFlag_internal(pidOffset, 0, 6):calcAvailablePIDFlag_internal(pidOffset, 0, 7);
 }
 
-constexpr unsigned char calcAvailablePIDFlag_internal(int pidOffset, int bitIndex, int lastBitIndex)
-{
-    return (bitIndex == lastBitIndex) ? (_PID_BYTE_LENGTH[pidOffset + bitIndex] > 0) : (((_PID_BYTE_LENGTH[pidOffset + bitIndex] > 0) << (lastBitIndex - bitIndex)) | calcAvailablePIDFlag_internal(pidOffset, bitIndex + 1, lastBitIndex));
-}
+# --- Create available PID flag map --- #
+# --- Do not edit --- #
 
-PROGMEM const unsigned char PIDAvailableFlagMap[32] = 
-{
+calcAvailablePIDFlag(pidOffset):
+    return (pidOffset == 0xF9)?calcAvailablePIDFlag_internal(pidOffset, 0, 6):calcAvailablePIDFlag_internal(pidOffset, 0, 7)
+
+calcAvailablePIDFlag_internal(int pidOffset, int bitIndex, int lastBitIndex):
+    return (bitIndex == lastBitIndex) ? (_PID_BYTE_LENGTH[pidOffset + bitIndex] > 0) : (((_PID_BYTE_LENGTH[pidOffset + bitIndex] > 0) << (lastBitIndex - bitIndex)) | calcAvailablePIDFlag_internal(pidOffset, bitIndex + 1, lastBitIndex))
+
+PIDAvailableFlagMap[32] = 
     calcAvailablePIDFlag(0x01), calcAvailablePIDFlag(0x09), calcAvailablePIDFlag(0x11), (unsigned char)(calcAvailablePIDFlag(0x19) | 0x01),
     calcAvailablePIDFlag(0x21), calcAvailablePIDFlag(0x29), calcAvailablePIDFlag(0x31), (unsigned char)(calcAvailablePIDFlag(0x39) | 0x01),
     calcAvailablePIDFlag(0x41), calcAvailablePIDFlag(0x49), calcAvailablePIDFlag(0x51), (unsigned char)(calcAvailablePIDFlag(0x59) | 0x01),
@@ -291,24 +279,19 @@ PROGMEM const unsigned char PIDAvailableFlagMap[32] =
     calcAvailablePIDFlag(0xA1), calcAvailablePIDFlag(0xA9), calcAvailablePIDFlag(0xB1), (unsigned char)(calcAvailablePIDFlag(0xB9) | 0x01),
     calcAvailablePIDFlag(0xC1), calcAvailablePIDFlag(0xC9), calcAvailablePIDFlag(0xD1), (unsigned char)(calcAvailablePIDFlag(0xD9) | 0x01),
     calcAvailablePIDFlag(0xE1), calcAvailablePIDFlag(0xE9), calcAvailablePIDFlag(0xF1), calcAvailablePIDFlag(0xF9)
-};
 
-/* ---- Create PID byte length and memory address (to store pid value) map, and save to PROGMEM ---- */
-/* ---- Do not edit --*/
-constexpr unsigned int calcPIDMemAddress(int pid);
-constexpr unsigned int calcPIDMemAddress_internal(int currentPID, int targetPID);
+# ---- Create PID byte length and memory address (to store pid value) map, and save to PROGMEM ---- #
+# ---- Do not edit --#
 
-constexpr unsigned int calcPIDMemAddress(int pid)
-{
-    return (pid == 0x00) ? 0 : (calcPIDMemAddress_internal(0, pid - 1) + 1);
-}
+calcPIDMemAddress(pid):
+    return (pid == 0x00) ? 0 : (calcPIDMemAddress_internal(0, pid - 1) + 1)
 
 constexpr unsigned int calcPIDMemAddress_internal(int currentPID, int targetPID)
 {
     return (currentPID == targetPID) ? _PID_BYTE_LENGTH[currentPID] : (_PID_BYTE_LENGTH[currentPID] + calcPIDMemAddress_internal(currentPID + 1, targetPID));
 }
 
-PROGMEM const unsigned char PIDByteLengthMap[256] =
+PIDByteLengthMap =
     {
         _PID_BYTE_LENGTH[0x00],
         _PID_BYTE_LENGTH[0x01],
@@ -565,9 +548,10 @@ PROGMEM const unsigned char PIDByteLengthMap[256] =
         _PID_BYTE_LENGTH[0xFC],
         _PID_BYTE_LENGTH[0xFD],
         _PID_BYTE_LENGTH[0xFE],
-        _PID_BYTE_LENGTH[0xFF]};
+        _PID_BYTE_LENGTH[0xFF]
+}
 
-PROGMEM const unsigned int PIDAddressMap[256] =
+PIDAddressMap[256] =
     {
         calcPIDMemAddress(0x00),
         calcPIDMemAddress(0x01),
@@ -824,8 +808,7 @@ PROGMEM const unsigned int PIDAddressMap[256] =
         calcPIDMemAddress(0xFC),
         calcPIDMemAddress(0xFD),
         calcPIDMemAddress(0xFE),
-        calcPIDMemAddress(0xFF)};
+        calcPIDMemAddress(0xFF)
+}
 
-constexpr unsigned int PIDMemSize = calcPIDMemAddress(0xFF) + _PID_BYTE_LENGTH[0xFF];
-
-#endif
+PIDMemSize = calcPIDMemAddress(0xFF) + _PID_BYTE_LENGTH[0xFF]
