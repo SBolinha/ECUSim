@@ -1,16 +1,12 @@
-/*
+***
   See:
   https://garretlab.web.fc2.com/arduino.cc/docs/learn/programming/memory-guide/
-*/
+***
+import psutil
 
-void display_freeram() {
-  Serial.print(F("- SRAM left: "));
-  Serial.println(freeRam());
-}
+display_freeram:
+  print("- SRAM left:",freeRam())
 
-int freeRam() {
-  extern int __heap_start,*__brkval;
-  int v;
-  return (int)&v - (__brkval == 0  
-    ? (int)&__heap_start : (int) __brkval);  
-}
+freeRam():
+  stats = psutil.virtual_memory()  # returns a named tuple
+  return getattr(stats, 'available')
