@@ -1,149 +1,111 @@
-#include "CANMesasgeHandle.h"
-#include "PIDMessageBuilder.h"
-#include "AVRFreeRAM.h"
+import "CANMesasgeHandle.h"
+import "PIDMessageBuilder.h"
+import "AVRFreeRAM.h"
 
-IsoTp isotp(&CAN, 0);
+IsoTp isotp(CAN, 0)
 
-constexpr int RETURN_MSGBUILD_BUF_LENGTH = 128;
-constexpr int PID_LIST_LENGTH = 6;
+int RETURN_MSGBUILD_BUF_LENGTH = 128
+int PID_LIST_LENGTH = 6
 
-void initializeCAN()
-{
-  bool initSucess = false;
-  while (!initSucess)
-  {
-    if (CAN_OK == CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ)) // init can bus : baudrate = 250k
-    {
-      Serial.println(F("CAN BUS Shield init ok!"));
-      initSucess = true;
-      CAN.setMode(MCP_NORMAL);   
-    }
-    else
-    {
-      Serial.println(F("CAN BUS Shield init fail"));
-      Serial.println(F("Init CAN BUS Shield again"));
-      delay(100);
-      initSucess = false;
-    }
-  }
-}
+initializeCAN:
+  boolinitSucess = False
+  while (!initSucess):
+    if (CAN_OK == CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ)): # init can bus : baudrate = 250k
+      println("CAN BUS Shield init ok!")
+      initSucess = True
+      CAN.setMode(MCP_NORMAL)
+    else:
+      print("CAN BUS Shield init fail")
+      print("Init CAN BUS Shield again")
+      delay(100)
+      initSucess = False
 
-void handleCANMessage()
-{
-  unsigned long canMsgHandleStartTime;
-  if (CANMSG_TIME_MEAS)
-    canMsgHandleStartTime = micros();
+handleCANMessage:
+  canMsgHandleStartTime = 0
+  if (CANMSG_TIME_MEAS):
+    canMsgHandleStartTime = micros()
 
-  if (CANMSG_DEBUG)
-    Serial.println(F("CAN message handle start."));
+  if (CANMSG_DEBUG):
+    print("CAN message handle start.")
 
-  byte receivedCANBuf[CAN_PAYLOAD_LENGTH];
-  unsigned long canId;
-  unsigned char len;
-  uint8_t recvResult;
+  byte receivedCANBuf[CAN_PAYLOAD_LENGTH]
+  unsigned long canId
+  unsigned char len
+  uint8_t recvResult
 
-  recvResult = CAN.readMsgBuf(&canId, &len, receivedCANBuf);
+  recvResult = CAN.readMsgBuf(canId, &len, receivedCANBuf)
 
-  if (len > CAN_PAYLOAD_LENGTH)
-  {
-    if (CANMSG_FATAL)
-      Serial.println(F("FATAL: CAN read message length exceed CAN_PAYLOAD_LENGTH."));
+  if (len > CAN_PAYLOAD_LENGTH):
+    if (CANMSG_FATAL):
+      print("FATAL: CAN read message length exceed CAN_PAYLOAD_LENGTH.")
+    return
 
-    return;
-  }
+  if(CANMSG_ERROR):
+    if(recvResult != CAN_OK):
+      print("ERROR: CAN message receive is failed. Return of readMsgBuf :", recvResult)
 
-  if(CANMSG_ERROR)
-  {
-    if(recvResult != CAN_OK) {
-      Serial.print(F("ERROR: CAN message receive is failed. Return of readMsgBuf : "));
-      Serial.println(recvResult);
-    }
-  }
-
-  if (CANMSG_DEBUG)
-  {
-    Serial.print(F("MCP read result code: "));
-    Serial.println(recvResult);
-    Serial.print(F("Msg from canId: "));
-    Serial.print(canId, HEX);
-    Serial.print(F(" Msg length: "));
-    Serial.print(len);
-    Serial.print(F(" Msg content: "));
-    for(int i = 0; i < CAN_PAYLOAD_LENGTH; i++)
-    {
-      Serial.print(receivedCANBuf[i], HEX);
+  if (CANMSG_DEBUG):
+    print("MCP read result code:", recvResult)
+    print("Msg from canId:", canId, HEX)
+    print("Msg length:", len)
+    print("Msg content:", end='')
+    for i in range(0, CAN_PAYLOAD_LENGTH):
+      print(receivedCANBuf[i], HEX)
       if (i == CAN_PAYLOAD_LENGTH - 1)
-        Serial.println();
+        print('')
       else
-        Serial.print(",");
-    }
-  }
+        print(",", end='')
 
-  // Ignore query if the ID do not match with this ECU ID (or 0x7DF(send to all ECU))
-  if((canId != 0x7DF) && (canId != ECU_CAN_ID))
-  {
-    if (CANMSG_DEBUG)
-      Serial.println(F("CAM ID do not match with this ECU's ID."));
-    
-    return;
-  }
+  # Ignore query if the ID do not match with this ECU ID (or 0x7DF(send to all ECU))
+  if((canId != 0x7DF) and (canId != ECU_CAN_ID)):
+    if (CANMSG_DEBUG):
+      print("CAM ID do not match with this ECU's ID.")
+    return
 
-  // Wait time
-  if(ECU_WAIT > 0)
-    delay(ECU_WAIT);
+  # Wait time
+  if(ECU_WAIT > 0):
+    delay(ECU_WAIT)
 
-  // Get query message length and check service mode.
-  const uint8_t queryMessageLength = receivedCANBuf[0];
-  const uint8_t serviceMode = receivedCANBuf[1];
-  if (serviceMode != 0x01)
-  {
-    if (CANMSG_ERROR)
-      Serial.println(F("ERROR: CAN query service mode needs to be 1 (show current data)."));
+  # Get query message length and check service mode.
+  queryMessageLength = receivedCANBuf[0]
+  serviceMode = receivedCANBuf[1]
+  if (serviceMode != 0x01):
+    if (CANMSG_ERROR):
+      print("ERROR: CAN query service mode needs to be 1 (show current data).")
+    return
 
-    return;
-  }
+  if(queryMessageLength < 2 or queryMessageLength > 7):
+    if (CANMSG_ERROR):
+      print("ERROR: CAN query message length needs to be between 2 and 7 (1 to 6 PIDs).")
+    return
 
-  if(queryMessageLength < 2 || queryMessageLength > 7)
-  {
-    if (CANMSG_ERROR)
-      Serial.println(F("ERROR: CAN query message length needs to be between 2 and 7 (1 to 6 PIDs)."));
+  # Get query PID codes
+  requestedPIDList[PID_LIST_LENGTH]
+  uint8_t requestedPIDCount = queryMessageLength - 1 # Exclude service mode from query length
+  for i in range(0, requestedPIDCount):
+    requestedPIDList[i] = receivedCANBuf[i + 2]
 
-    return;
-  }
-
-  // Get query PID codes
-  uint8_t requestedPIDList[PID_LIST_LENGTH];
-  const uint8_t requestedPIDCount = queryMessageLength - 1; // Exclude service mode from query length
-  for(uint8_t i = 0; i < requestedPIDCount; i++)
-    requestedPIDList[i] = receivedCANBuf[i + 2];
-
-  if (CANMSG_DEBUG)
-  {
-    Serial.print(F("PID query: "));
-    for(uint8_t i = 0; i < requestedPIDCount; i++)
-    {
-      Serial.print(requestedPIDList[i], HEX);
+  if (CANMSG_DEBUG):
+    print("PID query: ", end = '')
+    for i in range(0, requestedPIDCount):
+      print(requestedPIDList[i], HEX, end = '')
       if(i == requestedPIDCount - 1)
-        Serial.println();
+        print('')
       else
-        Serial.print(F(","));
-    }
-  }
+        print(",", end = '')
 
-  // Build up CAN return message
-  const uint8_t returnServiceMode = serviceMode + 0x40;
-  byte returnMessageBuf[RETURN_MSGBUILD_BUF_LENGTH];
-  uint8_t returnByteCount;
+  # Build up CAN return message
+  returnServiceMode = serviceMode + 0x40
+  returnMessageBuf[RETURN_MSGBUILD_BUF_LENGTH]
+  returnByteCount;
 
-  int pidValMessageResult = buildPIDValueMessage(returnMessageBuf, returnByteCount, requestedPIDList, requestedPIDCount, returnServiceMode);
-  if (pidValMessageResult == PID_NOT_AVAILABLE)
-  {
-    if (CANMSG_ERROR)
-      Serial.println(F("ERROR: CAN query PID is not supported."));
-    return;
-  }
+  pidValMessageResult = buildPIDValueMessage(returnMessageBuf, returnByteCount, requestedPIDList, requestedPIDCount, returnServiceMode);
+  if (pidValMessageResult == PID_NOT_AVAILABLE):
+    if (CANMSG_ERROR):
+      print("ERROR: CAN query PID is not supported.")
+    return
 
-  // Send CAN return message.
+  # Send CAN return message.
   struct Message_t txMsg;
   uint8_t sendResult;
   txMsg.len = returnByteCount;
@@ -152,35 +114,23 @@ void handleCANMessage()
   txMsg.Buffer = returnMessageBuf;
   sendResult = isotp.send(&txMsg);
 
-  if(CANMSG_ERROR)
-  {
-    if(sendResult != CAN_OK) {
-      Serial.print(F("ERROR: CAN message send is failed. Return of sendMsg : "));
-      Serial.println(sendResult);
-    }
-  }
+  if(CANMSG_ERROR):
+    if(sendResult != CAN_OK):
+      print("ERROR: CAN message send is failed. Return of sendMsg :", sendResult)
 
-  if(CANMSG_TIME_MEAS)
-  {
-    Serial.print(F("CAN message handle time (micros): "));
-    Serial.println(micros() - canMsgHandleStartTime);
-  }
-  if (CANMSG_DEBUG)
-  {
-    Serial.print(F("Return. Value (with padding): "));
-    for (int i = 0; i < returnByteCount; i++)
-    {
-      Serial.print(returnMessageBuf[i], HEX);
-      if (i == returnByteCount - 1)
-        Serial.println();
-      else
-        Serial.print(",");
-    }
+  if(CANMSG_TIME_MEAS):
+    Serial.print("CAN message handle time (micros):", micros() - canMsgHandleStartTime)
 
-    Serial.print(F("MCP send result code :"));
-    Serial.println(sendResult);
-  }
+  if (CANMSG_DEBUG):
+    print("Return. Value (with padding):", end = '')
+    for i in range(0, returnByteCount):
+      print(returnMessageBuf[i], HEX, end = '');
+      if (i == returnByteCount - 1):
+        print('')
+      else:
+        print(",", end = '')
 
-  if(CANMSG_FREERAM_MEAS)
-    display_freeram();
-}
+    print("MCP send result code :", sendResult)
+
+  if(CANMSG_FREERAM_MEAS):
+    display_freeram()
