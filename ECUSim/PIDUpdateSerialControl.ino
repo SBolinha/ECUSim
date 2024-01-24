@@ -1,13 +1,9 @@
-import "PIDUpdateSerialControl.h"
 
-flushSerialInbuf
-parseOneByteHex(char *hexChars, byte *ret)
-
-initializePIDValueMap:
+def initializePIDValueMap:
   for i in range(i, PIDMemSize):
     PID_Value_Map[i] = 0;
 
-flushSerialInbuf:
+def flushSerialInbuf:
   if (PIDSET_ERROR)
     print("Flush serial port input buffer..")
 
@@ -17,7 +13,7 @@ flushSerialInbuf:
   if (PIDSET_ERROR):
     print("Flush serial port input buffer finished.")
 
-parsePIDUPdateMessage:
+def parsePIDUPdateMessage:
   if (PIDSET_DEBUG):
     print("PID update start.")
 
@@ -86,7 +82,7 @@ parsePIDUPdateMessage:
         print('')
     print("PID set Ok");
 
-parseOneByteHex(hexChars, ret):
+def parseOneByteHex(hexChars, ret):
   val = 0;
   for i in range(0, 2):
     baseVal = 1 << 4 * (1 - i)
