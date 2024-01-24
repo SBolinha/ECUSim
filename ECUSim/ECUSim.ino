@@ -1,23 +1,18 @@
-#include "ECUSim.h"
-#include "PIDUpdateSerialControl.h"
-#include "CANMesasgeHandle.h"
+import "ECUSim.h"
+import "PIDUpdateSerialControl.h"
+import "CANMesasgeHandle.h"
 
-byte PID_Value_Map[PIDMemSize];
-MCP_CAN CAN(10); // CAN CS: pin 10
+PID_Value_Map[PIDMemSize]
+MCP_CAN CAN(10) # CAN CS: pin 10
 
-void setup()
-{
+setup():
   Serial.begin(115200);
-  Serial.println(F("------------------- Arduino setup start ---------------------------"));
-  initializePIDValueMap();
-  initializeCAN();
-}
+  print("------------------- ECUSim setup start ---------------------------")
+  initializePIDValueMap()
+  initializeCAN()
 
-void loop()
-{
+void loop():
   if (Serial.available() >= SERIAL_MSG_LENGTH)
-    parsePIDUPdateMessage();
+    parsePIDUPdateMessage()
   if (CAN.checkReceive() == CAN_MSGAVAIL)
-    handleCANMessage();
-}
-
+    handleCANMessage()
