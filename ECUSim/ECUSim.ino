@@ -1,7 +1,3 @@
-import "ECUSim.h"
-import "PIDUpdateSerialControl.h"
-import "CANMesasgeHandle.h"
-
 PID_Value_Map[PIDMemSize]
 MCP_CAN CAN(10) # CAN CS: pin 10
 
